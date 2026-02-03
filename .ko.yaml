@@ -1,0 +1,6 @@
+defaultBaseImage: gcr.io/distroless/static:nonroot
+builds:
+  - id: unifi-protect-pushover-bridge
+    main: .
+    env:
+      - CGO_ENABLED=0

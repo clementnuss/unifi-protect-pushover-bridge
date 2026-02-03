@@ -1,0 +1,64 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: unifi-pushover-bridge
+  labels:
+    app: unifi-pushover-bridge
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: unifi-pushover-bridge
+  template:
+    metadata:
+      labels:
+        app: unifi-pushover-bridge
+    spec:
+      containers:
+        - name: unifi-pushover-bridge
+          image: ko://github.com/clementnuss/unifi-protect-pushover-bridge
+          ports:
+            - containerPort: 8080
+              name: http
+          env:
+            - name: PORT
+              value: "8080"
+            - name: PUSHOVER_APP_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: pushover-credentials
+                  key: app-token
+            - name: PUSHOVER_USER_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: pushover-credentials
+                  key: user-key
+            - name: PUSHOVER_PRIORITY
+              value: "2"
+            - name: PUSHOVER_RETRY
+              value: "60"
+            - name: PUSHOVER_EXPIRE
+              value: "3600"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              cpu: 100m
+              memory: 64Mi
+          securityContext:
+            runAsNonRoot: true
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false

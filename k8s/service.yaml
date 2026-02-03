@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: unifi-pushover-bridge
+  labels:
+    app: unifi-pushover-bridge
+spec:
+  type: ClusterIP
+  selector:
+    app: unifi-pushover-bridge
+  ports:
+    - port: 8080
+      targetPort: http
+      protocol: TCP
+      name: http
