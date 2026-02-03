@@ -31,25 +31,53 @@ func New(cfg *config.Config, logger *slog.Logger) *Notifier {
 	}
 }
 
+// triggerInfo holds French translation and gender
+type triggerInfo struct {
+	name     string
+	feminine bool
+}
+
+// triggerTypeFR translates trigger types to French with gender
+var triggerTypeFR = map[string]triggerInfo{
+	"person":  {"personne", true},
+	"vehicle": {"véhicule", false},
+	"animal":  {"animal", false},
+	"motion":  {"mouvement", false},
+	"package": {"colis", false},
+	"ring":    {"sonnette", true},
+}
+
 // SendAlert sends an emergency notification for a UniFi webhook event
 func (n *Notifier) SendAlert(webhook *types.UnifiWebhook) error {
-	triggerType := "unknown"
+	triggerType := "inconnu"
+	detected := "détecté"
+
 	if len(webhook.Alarm.Triggers) > 0 {
-		triggerType = webhook.Alarm.Triggers[0].Key
+		key := webhook.Alarm.Triggers[0].Key
+		if info, ok := triggerTypeFR[key]; ok {
+			triggerType = info.name
+			if info.feminine {
+				detected = "détectée"
+			}
+		} else {
+			triggerType = key
+		}
 	}
 
-	// Convert timestamp from milliseconds to time
-	timestamp := time.UnixMilli(webhook.Timestamp)
-	timeStr := timestamp.Format("03:04 PM")
+	// Convert timestamp from milliseconds to time in Swiss timezone
+	loc, _ := time.LoadLocation("Europe/Zurich")
+	timestamp := time.UnixMilli(webhook.Timestamp).In(loc)
+	timeStr := timestamp.Format("15:04")
 
-	// Format the message
-	messageText := fmt.Sprintf("🚨 %s - %s detected at %s",
+	// Format the message in French
+	messageText := fmt.Sprintf("🚨 %s - %s %s à %s",
 		webhook.Alarm.Name,
 		triggerType,
+		detected,
 		timeStr,
 	)
 
-	message := pushover.NewMessageWithTitle(messageText, "UniFi Protect Alert")
+	message := pushover.NewMessageWithTitle(messageText, "Alerte UniFi Protect")
 	message.Priority = n.config.PushoverPriority
 	message.Timestamp = timestamp.Unix()
 
